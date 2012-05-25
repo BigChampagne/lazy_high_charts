@@ -28,7 +28,31 @@ module LazyHighCharts
         k = key.to_s.camelize.gsub!(/\b\w/) { $&.downcase }
         options_collection << "#{k}: #{object.options[key].to_json}"
       end
-      options_collection << "series: #{object.data.to_json}"
+
+      # This check is put in to catch for those graphs that are time series charts.  In that event the
+      # data needs to be reformated rather than just a blind JSON conversion
+      if object.data.first[:data].first.class == Array and (object.data.first[:data].first.first.instance_of? DateTime or object.data.first[:data].first.first.instance_of? Date)
+        series_string = "series: ["
+        object.data.each do |single_series|
+          series_string << "{name:'#{single_series[:name]}', data:["
+
+          single_series[:data].each do |single_data|
+            series_string << "[Date.UTC(#{single_data[0].strftime('%Y,%m,%d')}),#{single_data[1]}]"
+            series_string << "," unless single_data == single_series[:data].last
+          end
+
+          series_string << "]}"
+          series_string << "," unless single_series == object.data.last
+
+        end
+
+        series_string << "]"
+        options_collection << series_string
+      else
+        # If this isn't a time series chart then just convert the data to JSON directly
+        options_collection << "series: #{object.data.to_json}"
+
+      end
 
       graph =<<-EOJS
       <script type="text/javascript">

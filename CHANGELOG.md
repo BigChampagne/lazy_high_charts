@@ -1,3 +1,6 @@
+* May 25, 2012
+  added support to do timeline charts if data series includes DateTime or Date objects
+
 * Jul 14, 2011
   add support rails 3.1 rc4 now
 
