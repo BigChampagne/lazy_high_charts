@@ -58,6 +58,44 @@ module LazyHighCharts
       end
     end
 
+    # This method will generate the options as a string suitable for straight
+    # use.  This is required because of the addition of the datetime capability put
+    # in.  The dates need to be formatted in a JS specific way.
+    def options_string
+      options_collection = []
+      options.keys.each do |key|
+        k = key.to_s.camelize.gsub!(/\b\w/) { $&.downcase }
+        options_collection << "\"#{k}\": #{options[key].to_json}"
+      end
+
+      # This check is put in to catch for those graphs that are time series charts.  In that event the
+      # data needs to be reformated rather than just a blind JSON conversion
+      if data.first[:data].first.class == Array and (data.first[:data].first.first.instance_of? DateTime or data.first[:data].first.first.instance_of? Date)
+        series_string = "\"series\": ["
+        data.each do |single_series|
+          series_string << "{\"name\":\"#{single_series[:name]}\", \"data\":["
+
+          single_series[:data].each do |single_data|
+            series_string << "[#{single_data[0].strftime('%s').to_i * 1000},#{single_data[1]}]"
+            series_string << "," unless single_data == single_series[:data].last
+          end
+
+          series_string << "]}"
+          series_string << "," unless single_series == data.last
+
+        end
+
+        series_string << "]"
+        options_collection << series_string
+      else
+        # If this isn't a time series chart then just convert the data to JSON directly
+        options_collection << "series: #{data.to_json}"
+
+      end
+
+      return "{#{options_collection.join(',')}}"
+    end
+
 private
 
     def series_options
